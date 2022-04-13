@@ -14,9 +14,34 @@ time = 0
 diagonal = 0
 move_map = 0
 
+#multiplicador para el movimiento del carro
+mov = 0
+
+#funcion para dibujar y redibujar el carro 
+def drawCar():
+    colors = [1,88/255,88/255]
+    glColor3f(colors[0],colors[1],colors[2])
+    glBegin(GL_QUADS)
+    xleft = w/2-50+mov;
+    xright = w/2+50+mov;
+    glVertex2d(xleft,150)#top izquierda
+    glVertex2d(xright,150)#top derecha
+    glVertex2d(xright,50)#bottom derecha
+    glVertex2d(xleft,50)#bottom izquierda
+    glEnd()
 
 def keyPressed ( key, x, y ):
-    global start, mov_y, time, diagonal, move_map
+    global start, mov_y, time, diagonal, move_map, mov, xright, xleft
+
+    if key == b'a':
+        if (mov >= -155):
+            mov += -10
+            drawCar()
+
+    if key == b'd':
+        if (mov <= 155):
+            mov += 10
+            drawCar()
 
     if key == b'\x1b':
         glutLeaveMainLoop()  
@@ -26,13 +51,14 @@ def keyPressed ( key, x, y ):
         time = 0
         diagonal = 0
         move_map = 0
+        mov = 0
     
 
 def keyUp ( key, x, y):
-    global flag_left, flag_down, flag_right, flag_up
+    global flag_left, flag_down, flag_right, flag_up, mov
 
     if key == b'\x1b':
-        glutLeaveMainLoop()  
+        glutLeaveMainLoop()
 
 def polygon(xc,yc,R,l,r,g,b):
     angle = 2*3.141592/l
@@ -165,6 +191,7 @@ def display():
     #---------------------DIBUJAR AQUI------------------------#
     draw_speedway(int(diagonal))
     draw_map(int(move_map))
+    drawCar()
     #---------------------------------------------------------#
 
     glutSwapBuffers()
