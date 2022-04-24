@@ -1,3 +1,4 @@
+import random
 from shutil import move
 from OpenGL.GL import *
 from OpenGL.GLUT import *
@@ -17,18 +18,72 @@ move_map = 0
 #multiplicador para el movimiento del carro
 mov = 0
 
+#Obstaculos
+y_obs = int(h/32*29+150)
+flag_obs_on = False
+x_obstacle = 0
+x_left = 0
+x_right = 0
+selecting_lane_obs = 0
+selecting_lane_car = 0
+
 #funcion para dibujar y redibujar el carro 
 def drawCar():
+    global x_left, x_right, selecting_lane_car, w
     colors = [1,88/255,88/255]
     glColor3f(colors[0],colors[1],colors[2])
     glBegin(GL_QUADS)
     xleft = w/2-50+mov;
+    x_left=xleft
     xright = w/2+50+mov;
+    x_right=xright;
     glVertex2d(xleft,150)#top izquierda
     glVertex2d(xright,150)#top derecha
     glVertex2d(xright,50)#bottom derecha
     glVertex2d(xleft,50)#bottom izquierda
     glEnd()
+
+    if x_left>int(0) and x_left<315:
+        selecting_lane_car=0
+    elif x_left>int(w/32*12) and x_left<int(w/32*17):
+        selecting_lane_car=1
+    elif x_left>int(w/32*17) and x_left<int(w):
+        selecting_lane_car=2
+
+def drawObstacle():
+    global y_obs, flag_obs_on, x_obstacle, h, selecting_lane_obs
+
+    if flag_obs_on == False:
+        selecting_lane_obs = random.randint(0,2)
+
+        if selecting_lane_obs == 0:
+            x_obstacle = w/32*9
+        elif selecting_lane_obs == 1:
+            x_obstacle = w/32*15
+        elif selecting_lane_obs == 2:
+            x_obstacle = w/32*21
+
+        glBegin(GL_QUADS)
+        glColor3f(1,1,1)
+        glVertex2d((x_obstacle), y_obs)
+        glVertex2d((x_obstacle)+50, y_obs)
+        glVertex2d((x_obstacle)+50, y_obs-50)
+        glVertex2d((x_obstacle), y_obs-50)
+        glEnd()
+
+        flag_obs_on = True
+
+    glBegin(GL_QUADS)
+    glColor3f(1,1,1)
+    glVertex2d((x_obstacle), y_obs)
+    glVertex2d((x_obstacle)+50, y_obs)
+    glVertex2d((x_obstacle)+50, y_obs-50)
+    glVertex2d((x_obstacle), y_obs-50)
+    glEnd()
+
+    if y_obs <= int(h/32-150):
+        y_obs = int(h/32*29+150)
+        flag_obs_on = False
 
 def keyPressed ( key, x, y ):
     global start, mov_y, time, diagonal, move_map, mov, xright, xleft
@@ -163,6 +218,17 @@ def timer_move(value): #Timer para mover las lineas de la carretera, la pista, y
                 start = False
         glutPostRedisplay()
     glutTimerFunc(20, timer_move, 1)
+
+def timer_move_obs(value):
+    global mov_y, start, time, diagonal, h, move_map, y_obs, x_left, x_right
+    if start:
+        y_obs -= 10
+    glutPostRedisplay()
+    print("car lane:"+str(selecting_lane_car))
+    print("obs lane:"+str(selecting_lane_obs))
+    print("xleft: " + str(x_left))
+    print("xright: " + str(x_right))
+    glutTimerFunc(25, timer_move_obs, 1)
 #---------------------------------------------------------------------------------#
 
 def init():
@@ -188,10 +254,23 @@ def display():
     glMatrixMode ( GL_MODELVIEW )
     glLoadIdentity()
     
+    if y_obs<=200 and y_obs>=50 and (selecting_lane_obs==selecting_lane_car):
+        if x_right>625:
+            glutLeaveMainLoop()
+        if x_right>445 and x_right<495:
+            glutLeaveMainLoop()
+        if x_left>445 and x_left<495:
+            glutLeaveMainLoop()
+        if x_left<445 and x_right>495:
+            glutLeaveMainLoop() 
+        if x_left<315:
+            glutLeaveMainLoop()
+
     #---------------------DIBUJAR AQUI------------------------#
     draw_speedway(int(diagonal))
     draw_map(int(move_map))
     drawCar()
+    drawObstacle()
     #---------------------------------------------------------#
 
     glutSwapBuffers()
@@ -214,11 +293,10 @@ def main():
     init()
 
     timer_move(0)
+    timer_move_obs(0)
 
     glutMainLoop()
 
 print("Presiona Escape para cerrar.")
 print("Presiona Espacio para iniciar.")
 main()
-
-
