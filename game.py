@@ -4,10 +4,12 @@ from OpenGL.GL import *
 from OpenGL.GLUT import *
 from OpenGL.GLU import *
 import numpy as np
+from modules.bezier import evaluate_bezier
 
 w,h = 950,650
 #Bandera de inicio
 start = False
+ban_loser = False
 
 #Movimiento
 mov_y = 0
@@ -26,6 +28,7 @@ x_left = 0
 x_right = 0
 selecting_lane_obs = 0
 selecting_lane_car = 0
+
 
 #funcion para dibujar y redibujar el carro 
 def drawCar():
@@ -85,8 +88,39 @@ def drawObstacle():
         y_obs = int(h/32*29+150)
         flag_obs_on = False
 
+def draw_loser():
+    global start, mov_y, time, diagonal, move_map, mov, xright, xleft, ban_loser
+    global y_obs, flag_obs_on, x_obstacle, x_left, x_right, selecting_lane_obs, selecting_lane_car
+    points = np.array([[w-(w-70),h/4],[w-(w-100),(h/4)*3],[w-(w-70),(h/4)*3],[w-(w-100),h/4], #l
+                    [w-(w-125),h/2 + 50],[w-(w-170),h/2 + 50], [w-(w-170), h/4 + 20], [w-(w-125),h/4 + 20], [w-(w-125),h/2 + 50], #o
+                    [w-(w-190),h/2 + 50],[w-(w-220),h/2 + 50],[w-(w-235),h/2 + 70],[w-(w-190),h/2 + 60],[w-(w-250),h/2], [w-(w-290),h/4 + 70], [w-(w-250),h/4], [w-(w-190),h/8 * 3], [w-(w-190),h/4 + 50], #s
+                    [w-(w-395),h/2 + 50], [w-(w-345),h/2 + 80], [w-(w-325),h/2], [w-(w-395),h/4], #e
+                    [w-(w-470),h/2 + 50], [w-(w-430),h/2 + 50], [w-(w-540),h/2 + 20], [w-(w-540),h/4], [w-(w-620),h/4 + 70]]) #r
+    paths = evaluate_bezier(points,50) #Coordenadas de lineas
+    path_x, path_y = paths[:,0], paths[:,1]
+    glColor3f(1,1,0)
+    glBegin(GL_LINE_STRIP)
+    for i in range(len(path_x)-1):
+        glVertex2d(path_x[i],path_y[i])
+    glEnd()
+    glutPostRedisplay()
+    start = False
+    mov_y = 0
+    time = 0
+    diagonal = 0
+    move_map = 0
+    mov = 0
+    ban_loser = True
+    y_obs = int(h/32*29+150)
+    flag_obs_on = False
+    x_obstacle = 0
+    x_left = 0
+    x_right = 0
+    selecting_lane_obs = 0
+    selecting_lane_car = 0
+
 def keyPressed ( key, x, y ):
-    global start, mov_y, time, diagonal, move_map, mov, xright, xleft
+    global start, mov_y, time, diagonal, move_map, mov, xright, xleft, ban_loser
 
     if key == b'a':
         if (mov >= -155):
@@ -102,6 +136,7 @@ def keyPressed ( key, x, y ):
         glutLeaveMainLoop()  
     if key == b' ':
         start = True
+        ban_loser = False
         mov_y = 0
         time = 0
         diagonal = 0
@@ -110,7 +145,7 @@ def keyPressed ( key, x, y ):
     
 
 def keyUp ( key, x, y):
-    global flag_left, flag_down, flag_right, flag_up, mov
+    global mov
 
     if key == b'\x1b':
         glutLeaveMainLoop()
@@ -202,7 +237,6 @@ def timer_move(value): #Timer para mover las lineas de la carretera, la pista, y
         elif time < 800: 
             mov_y -= 16
             if time < 370:
-                twist = True
                 diagonal += 0.5
             elif time < 565:
                 diagonal -= 0.5 
@@ -224,10 +258,10 @@ def timer_move_obs(value):
     if start:
         y_obs -= 10
     glutPostRedisplay()
-    print("car lane:"+str(selecting_lane_car))
-    print("obs lane:"+str(selecting_lane_obs))
-    print("xleft: " + str(x_left))
-    print("xright: " + str(x_right))
+    #print("car lane:"+str(selecting_lane_car))
+    #print("obs lane:"+str(selecting_lane_obs))
+    #print("xleft: " + str(x_left))
+    #print("xright: " + str(x_right))
     glutTimerFunc(25, timer_move_obs, 1)
 #---------------------------------------------------------------------------------#
 
@@ -256,21 +290,27 @@ def display():
     
     if y_obs<=200 and y_obs>=50 and (selecting_lane_obs==selecting_lane_car):
         if x_right>625:
-            glutLeaveMainLoop()
+            draw_loser()
         if x_right>445 and x_right<495:
-            glutLeaveMainLoop()
+            draw_loser()
+            #glutLeaveMainLoop()
         if x_left>445 and x_left<495:
-            glutLeaveMainLoop()
+            draw_loser()
+            #glutLeaveMainLoop()
         if x_left<445 and x_right>495:
-            glutLeaveMainLoop() 
+            draw_loser()
+            #glutLeaveMainLoop() 
         if x_left<315:
-            glutLeaveMainLoop()
+            draw_loser()
+            #glutLeaveMainLoop()
 
     #---------------------DIBUJAR AQUI------------------------#
     draw_speedway(int(diagonal))
     draw_map(int(move_map))
     drawCar()
     drawObstacle()
+    if ban_loser:
+        draw_loser()
     #---------------------------------------------------------#
 
     glutSwapBuffers()
